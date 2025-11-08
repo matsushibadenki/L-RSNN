@@ -20,6 +20,8 @@ class BaseRSNN(ABC):
         self.v_th_base = v_th
         self.v_reset = v_reset
         self.rec_delay = rec_delay
+        # 修正: 初期化シードをインスタンス変数として保存
+        self.rng_seed = rng_seed
         self.rng = np.random.default_rng(rng_seed)
         
         self.decay_m = (1.0 - self.dt / self.tau_m)
