@@ -61,6 +61,8 @@ def main(config_path: str):
         print(f"Error: {e}")
         import traceback
         traceback.print_exc()
+        # 修正: エラーが発生したら、非ゼロのステータスコードで終了する
+        sys.exit(1)
 
 if __name__ == "__main__":
     # configファイルへのパスを指定
