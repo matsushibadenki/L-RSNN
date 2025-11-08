@@ -1,0 +1,7 @@
+# ./requirements.txt
+# タイトル: 必要なライブラリ
+# 機能説明: プロジェクトの実行に必要なPythonライブラリを定義します。
+numpy<2.0
+scikit-learn
+dependency-injector
+langchain-core
