@@ -30,7 +30,8 @@ def main(config_path: str):
     # 2. 設定ファイルのロード
     if not os.path.exists(config_path):
         print(f"Error: Config file not found at {config_path}")
-        return
+        # 修正: 設定ファイルが見つからない場合は非ゼロで終了
+        sys.exit(1)
         
     print(f"Loading config from: {config_path}")
     container.config.from_json(config_path) # type: ignore[attr-defined]
@@ -68,6 +69,11 @@ if __name__ == "__main__":
     # configファイルへのパスを指定
     # (このスクリプト (src/main.py) から見て ../config/experiment_params.json)
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    default_config_path = os.path.join(base_dir, "..", "..", "config", "experiment_params.json")
     
+    # 修正: '..' を1つ削除し、プロジェクトルートを正しく指すように変更
+    default_config_path = os.path.join(base_dir, "..", "config", "experiment_params.json")
+    
+    # 正規化してパスを明確にする (オプションだが堅牢性が増す)
+    default_config_path = os.path.normpath(default_config_path)
+
     main(config_path=default_config_path)
