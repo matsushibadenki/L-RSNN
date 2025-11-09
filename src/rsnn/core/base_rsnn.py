@@ -6,6 +6,8 @@ from __future__ import annotations
 import numpy as np
 from abc import ABC, abstractmethod
 from typing import Callable, Tuple
+# 修正: 新しいLIFLayerをインポート (Objective 1.2)
+from .layers import LIFLayer
 
 class BaseRSNN(ABC):
     """RSNNモデルの抽象基底クラス"""
@@ -16,16 +18,27 @@ class BaseRSNN(ABC):
         self.n_input = n_input
         self.n_hidden = n_hidden
         self.dt = dt
-        self.tau_m = tau_m
-        self.v_th_base = v_th
-        self.v_reset = v_reset
         self.rec_delay = rec_delay
-        # 修正: 初期化シードをインスタンス変数として保存
         self.rng_seed = rng_seed
         self.rng = np.random.default_rng(rng_seed)
         
-        self.decay_m = (1.0 - self.dt / self.tau_m)
-        self.scale_m = (self.dt / self.tau_m)
+        # 修正: LIF層の初期化 (Objective 1.2)
+        # 電圧(V)、減衰(decay_m)などの状態はLIFLayerが管理する
+        self.lif_layer = LIFLayer(
+            shape=(n_hidden,),
+            dt=dt,
+            tau_m=tau_m,
+            v_th=v_th,
+            v_reset=v_reset
+        )
+        
+        # 修正: v_th_base などのパラメータをLIFLayerから取得
+        self.v_th_base = self.lif_layer.v_th
+        self.v_reset = self.lif_layer.v_reset
+        
+        # 修正: 状態変数を BaseRSNN から削除 (LIFLayerに移譲)
+        # self.decay_m = (1.0 - self.dt / self.tau_m)
+        # self.scale_m = (self.dt / self.tau_m)
         
         # 入力重み (W)
         self.W = self.rng.normal(0.5, 0.1, size=(n_hidden, n_input)).clip(min=0.0)
@@ -80,9 +93,8 @@ class BaseRSNN(ABC):
         for i in range(n_samples):
             # STDP学習はオフにして実行
             rec = self.run_sample(samples_rates[i], T, encoding_fn, encoding_params, train_stdp=False)
-            # Tで割って平均発火率（または総スパイク数/T）を計算
+            
             hidden_activity[i] = rec.sum(axis=0) / T
-            # サンプルあたりの総スパイク数
             total_spikes_per_sample[i] = rec.sum()
             
         return hidden_activity, total_spikes_per_sample
