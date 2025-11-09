@@ -40,28 +40,9 @@ class ModelsContainer(containers.DeclarativeContainer):
     config = providers.Configuration()
     core = providers.DependenciesContainer()
     
-    # ベースパラメータ (共通)
-    # ( 削除: providers.Singleton() で ** 展開すると TypeError が発生するため、
-    #   各モデルに直接パラメータを展開します )
-    # base_model_params = providers.Factory(
-    #     dict,
-    #     n_input=config.dataset_params.n_input,
-    #     n_hidden=config.model_params.n_hidden,
-    #     dt=config.simulation_params.dt,
-    #     tau_m=config.model_params.tau_m,
-    #     v_th=config.model_params.v_th,
-    #     v_reset=config.model_params.v_reset,
-    #     rec_delay=config.model_params.rec_delay,
-    #     rng_seed=config.model_params.rng_seed
-    # )
-    
-    # RSNN_Homeo (Singleton: 1インスタンスを使い回す)
-    # (シードを変える場合は Factory にする)
-    rsnn_homeo = providers.Singleton(
+    # RSNN_Homeo (Factory: 呼び出すたびに新規インスタンス)
+    rsnn_homeo = providers.Factory( # 修正: Singleton -> Factory
         models.RSNN_Homeo,
-        # **base_model_params, # <- 修正: TypeErrorのため展開
-        
-        # base_model_params の内容をここに展開
         n_input=config.dataset_params.n_input,
         n_hidden=config.model_params.n_hidden,
         dt=config.simulation_params.dt,
@@ -69,18 +50,15 @@ class ModelsContainer(containers.DeclarativeContainer):
         v_th=config.model_params.v_th,
         v_reset=config.model_params.v_reset,
         rec_delay=config.model_params.rec_delay,
-        rng_seed=config.model_params.rng_seed,
+        rng_seed=config.model_params.rng_seed, # デフォルトシード
         
         stdp_rule=core.stdp_rule,
         homeostasis_rule=core.homeostasis_rule
     )
     
-    # RSNN_EI (Singleton)
-    rsnn_ei = providers.Singleton(
+    # RSNN_EI (Factory)
+    rsnn_ei = providers.Factory( # 修正: Singleton -> Factory
         models.RSNN_EI,
-        # **base_model_params, # <- 修正: TypeErrorのため展開
-        
-        # base_model_params の内容をここに展開
         n_input=config.dataset_params.n_input,
         n_hidden=config.model_params.n_hidden,
         dt=config.simulation_params.dt,
@@ -88,12 +66,11 @@ class ModelsContainer(containers.DeclarativeContainer):
         v_th=config.model_params.v_th,
         v_reset=config.model_params.v_reset,
         rec_delay=config.model_params.rec_delay,
-        rng_seed=config.model_params.rng_seed,
+        rng_seed=config.model_params.rng_seed, # デフォルトシード
 
         stdp_rule=core.stdp_rule,
         homeostasis_rule=core.homeostasis_rule,
         excitatory_ratio=config.ei_params.excitatory_ratio,
-        # 修正: 欠落していたパラメータと閉じる括弧を追加
         inh_strength=config.ei_params.inh_strength,
         k_winners=config.ei_params.k_winners
     )
