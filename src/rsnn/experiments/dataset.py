@@ -9,24 +9,18 @@ import os
 
 # --- 修正: CIFAR-10対応のためのインポート ---
 
-# 修正: mypy [no-redef] エラーを回避するため、先に Any で定義
-torch: Any = None
-torchvision: Any = None
-transforms: Any = None
-TORCH_AVAILABLE = False
-
 try:
     import torch # type: ignore[import-untyped]
     import torchvision # type: ignore[import-untyped]
-    
-    # 修正: '... as transforms' ではなく、インポート後に属性として代入
-    transforms = torchvision.transforms
-    
+    import torchvision.transforms as transforms # type: ignore[import-untyped]
     TORCH_AVAILABLE = True
 except ImportError:
     print("Warning: torchvision not installed. CIFAR10Loader will not be available.")
-    # 修正: except ブロックでは代入しない (変数は既に None (Any) として定義されている)
-    pass 
+    TORCH_AVAILABLE = False
+    # 修正: mypyの [no-redef] エラーを明示的に無視する
+    torch: Any = None # type: ignore[no-redef]
+    torchvision: Any = None # type: ignore[no-redef]
+    transforms: Any = None # type: ignore[no-redef]
 # --- 修正ここまで ---
 
 
@@ -67,7 +61,7 @@ class CIFAR10Loader:
     (Objective 1.1)
     """
     def __init__(self, root_dir: str = "./data"):
-        if not TORCH_AVAILABLE or transforms is None: # 修正: transformsがNoneでないことも確認
+        if not TORCH_AVAILABLE:
             raise ImportError("torchvision is required for CIFAR10Loader. Please install it.")
         
         self.root_dir = root_dir
