@@ -112,7 +112,8 @@ class ResultReporter:
 
     def _calculate_stats(self, results: List[Dict], keys: List[str]) -> Dict[str, Dict[str, float]]:
         """複数シード結果の統計（平均、標準偏差など）を計算"""
-        stats_summary = {}
+        # 修正: 型注釈を追加
+        stats_summary: Dict[str, Dict[str, float]] = {}
         if not results:
             return stats_summary
         
