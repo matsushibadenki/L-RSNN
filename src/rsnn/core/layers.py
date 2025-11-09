@@ -1,6 +1,6 @@
 # ./src/rsnn/core/layers.py
 # タイトル: SNN層モジュール
-# 機能説明: SNNの基本的な層（LIFニューロン層）のロジックを定義します。
+# 機能説明: SNNの基本的な層（LIFニューロン層、全結合層）のロジックを定義します。
 #           (Objective 1.2 / 2.2 の基盤)
 from __future__ import annotations
 import numpy as np
@@ -9,17 +9,16 @@ from abc import ABC, abstractmethod
 class BaseLayer(ABC):
     """SNN層の抽象基底クラス"""
     
-    # 修正: @abstractabstractmethod -> @abstractmethod
     @abstractmethod
-    def __call__(self, input_current: np.ndarray) -> np.ndarray:
+    def __call__(self, input_data: np.ndarray) -> np.ndarray:
         """
         1タイムステップの順伝播を実行します。
         
         Args:
-            input_current (np.ndarray): この層への入力電流
+            input_data (np.ndarray): この層への入力（スパイクまたは電流）
         
         Returns:
-            np.ndarray: この層の出力スパイク (0.0 or 1.0)
+            np.ndarray: この層の出力（電流またはスパイク）
         """
         pass
 
@@ -28,6 +27,45 @@ class BaseLayer(ABC):
         """層の状態（電圧など）をリセットします。"""
         pass
 
+# --- 修正: FCLayer (全結合層) を追加 (Objective 1.2 / 2.2) ---
+class FCLayer(BaseLayer):
+    """
+    全結合層（Fully Connected Layer）。
+    重み (W) を保持し、入力スパイクとの行列積（電流）を計算します。
+    この層自体は時間的な状態（電圧など）を持ちません。
+    """
+    
+    def __init__(self, n_input: int, n_output: int, rng: np.random.Generator):
+        self.n_input = n_input
+        self.n_output = n_output
+        self.rng = rng
+        
+        # 重みの初期化
+        self.W = self.rng.normal(0.5, 0.1, size=(n_output, n_input)).clip(min=0.0)
+
+    def __call__(self, input_spikes: np.ndarray) -> np.ndarray:
+        """
+        順伝播を実行します (I = W @ S)。
+        
+        Args:
+            input_spikes (np.ndarray): 入力スパイクベクトル (n_input,)
+        
+        Returns:
+            np.ndarray: 出力電流ベクトル (n_output,)
+        """
+        if input_spikes.shape != (self.n_input,):
+             # バッチ処理（(Batch, n_input)）にも対応（オプション）
+            if input_spikes.ndim == 2 and input_spikes.shape[1] == self.n_input:
+                return (self.W @ input_spikes.T).T # (Batch, n_output)
+            raise ValueError(f"Input shape {input_spikes.shape} mismatch. Expected ({self.n_input},)")
+            
+        return self.W @ input_spikes
+
+    def reset(self):
+        """状態を持たないため、何も行いません。"""
+        pass
+
+# --- LIF層 (既存) ---
 class LIFLayer(BaseLayer):
     """
     Leaky Integrate-and-Fire (LIF) ニューロン層。
@@ -38,14 +76,13 @@ class LIFLayer(BaseLayer):
                  shape: tuple[int, ...], 
                  dt: float, 
                  tau_m: float, 
-                 v_th: float, # 修正: 初期値はfloat
+                 v_th: float,
                  v_reset: float):
         
         self.shape = shape
         self.dt = dt
         self.tau_m = tau_m
         
-        # 修正: v_th を適応的 (ndarray) も許容するように変更
         self.v_th_base: float | np.ndarray = v_th
         self.v_th: float | np.ndarray = v_th 
         
@@ -87,5 +124,4 @@ class LIFLayer(BaseLayer):
         """電圧とスパイクをリセットし、閾値をベース値に戻します。"""
         self.V = np.zeros(self.shape)
         self.spikes = np.zeros(self.shape)
-        # 修正: 閾値をベース値に戻す
         self.v_th = self.v_th_base
