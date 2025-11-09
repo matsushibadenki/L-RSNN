@@ -86,4 +86,3 @@ class BaseRSNN(ABC):
             total_spikes_per_sample[i] = rec.sum()
             
         return hidden_activity, total_spikes_per_sample
-}
