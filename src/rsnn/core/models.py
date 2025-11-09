@@ -48,7 +48,8 @@ class RSNN_Homeo(BaseRSNN):
         firing_count = np.zeros(self.n_hidden)
 
         for t in range(T):
-            inp = input_matrix[t].astype(float)
+            # 修正: mypy エラー (assignment) を無視 (Line 65)
+            inp = input_matrix[t].astype(float) # type: ignore[assignment]
             
             # リカレント入力（遅延を考慮）
             rec_spikes = spikes_buffer[-(self.rec_delay + 1)]
