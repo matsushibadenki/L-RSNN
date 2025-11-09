@@ -9,8 +9,8 @@ import sys
 # Pythonパスに 'src' を追加
 sys.path.append(os.path.dirname(__file__))
 
-from rsnn.di.containers import ApplicationContainer
-from rsnn.experiments.chains import ExperimentChains
+from rsnn.di.containers import ApplicationContainer  # type: ignore[import-not-found]
+from rsnn.experiments.chains import ExperimentChains  # type: ignore[import-not-found]
 
 def main(config_path: str):
     """
