@@ -9,7 +9,7 @@ from abc import ABC, abstractmethod
 class BaseLayer(ABC):
     """SNN層の抽象基底クラス"""
     
-    @abstractmethod
+    @abstractabstractmethod
     def __call__(self, input_current: np.ndarray) -> np.ndarray:
         """
         1タイムステップの順伝播を実行します。
@@ -46,7 +46,8 @@ class LIFLayer(BaseLayer):
         
         # 修正: v_th を適応的 (ndarray) も許容するように変更
         self.v_th_base: float | np.ndarray = v_th
-        self.v_th: float | np.ndarray = v_th_base 
+        # 修正: v_th_base (未定義) ではなく v_th (引数) を使用 (Line 49)
+        self.v_th: float | np.ndarray = v_th 
         
         self.v_reset = v_reset
         
