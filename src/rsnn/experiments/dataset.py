@@ -5,21 +5,24 @@
 from __future__ import annotations
 import numpy as np
 from typing import Tuple, Optional, Any # 修正: Any をインポート
-import os # 修正: osモジュールをインポート
+import os 
 
 # --- 修正: CIFAR-10対応のためのインポート ---
+
+# 修正: mypyのために、先に Any で定義
+torch: Any = None
+torchvision: Any = None
+transforms: Any = None
+TORCH_AVAILABLE = False
+
 try:
     import torch # type: ignore[import-untyped]
     import torchvision # type: ignore[import-untyped]
     import torchvision.transforms as transforms # type: ignore[import-untyped]
     TORCH_AVAILABLE = True
 except ImportError:
-    TORCH_AVAILABLE = False
     print("Warning: torchvision not installed. CIFAR10Loader will not be available.")
-    # 修正: mypyのためのダミー定義を Any に変更
-    torch: Any = None
-    torchvision: Any = None
-    transforms: Any = None
+    pass # 変数は既に None (Any) として定義されている
 # --- 修正ここまで ---
 
 
@@ -37,7 +40,7 @@ class DatasetGenerator:
     def make_toy_rates(self, n_samples: int) -> Tuple[np.ndarray, np.ndarray]:
         """
         合成レートデータセットを作成します。
-        クラス0: 最初の'pattern_size'ニューロンが高レート
+        クラス0: F 'pattern_size'ニューロンが高レート
         クラス1: 最後の'pattern_size'ニューロンが高レート
         """
         rates = np.ones((n_samples, self.n_input)) * self.base_rate
