@@ -6,6 +6,7 @@ import numpy as np
 from typing import Callable
 from .base_rsnn import BaseRSNN
 from .learning_rules import STDP, Homeostasis
+# 修正: LIFLayer (layers.py) への依存は BaseRSNN が処理
 
 class RSNN_Homeo(BaseRSNN):
     """STDPと恒常性（適応的閾値）を持つRSNNモデル"""
@@ -27,8 +28,10 @@ class RSNN_Homeo(BaseRSNN):
                    encoding_params: dict,
                    train_stdp: bool = True) -> np.ndarray:
         
-        # 状態の初期化
-        V = np.zeros(self.n_hidden)
+        # 修正: 状態の初期化 (LIFLayerのリセット) (Objective 1.2)
+        self.lif_layer.reset()
+        # V (電圧) は self.lif_layer が内部で管理
+        
         # スパイクバッファ (遅延配信用)
         spikes_buffer = np.zeros((self.rec_delay + 2, self.n_hidden))
         hidden_record = np.zeros((T, self.n_hidden))
@@ -53,14 +56,22 @@ class RSNN_Homeo(BaseRSNN):
             I_in = self.W @ inp
             I_rec = self.U @ rec_spikes
             
-            # 電圧更新 (LIF)
-            V = V * self.decay_m + (I_in + I_rec) * self.scale_m
+            # 修正: 電圧更新 (LIF) をLIFLayerに移譲 (Objective 1.2)
+            # V = V * self.decay_m + (I_in + I_rec) * self.scale_m
             
-            # スパイク判定 (適応的閾値を使用)
-            spk = (V >= self.adaptive_theta).astype(float)
+            # 修正: スパイク判定 (適応的閾値を使用)
+            # 適応的閾値をLIF層の基本閾値に一時的に設定
+            original_v_th = self.lif_layer.v_th
+            self.lif_layer.v_th = self.adaptive_theta
             
-            # リセット
-            V = np.where(spk > 0, self.v_reset, V)
+            # LIF層の呼び出し (電圧更新、発火、リセットを内部で実行)
+            spk = self.lif_layer(I_in + I_rec)
+            
+            # 閾値を元に戻す (次の恒常性更新のため)
+            self.lif_layer.v_th = original_v_th
+            
+            # 修正: リセットはLIFLayer内部で実行される
+            # V = np.where(spk > 0, self.v_reset, V)
             
             # バッファ更新
             spikes_buffer = np.roll(spikes_buffer, -1, axis=0)
@@ -117,7 +128,10 @@ class RSNN_EI(RSNN_Homeo):
                    encoding_params: dict,
                    train_stdp: bool = True) -> np.ndarray:
         
-        V = np.zeros(self.n_hidden)
+        # 修正: 状態の初期化 (LIFLayerのリセット)
+        self.lif_layer.reset()
+        # V (電圧) は self.lif_layer が内部で管理
+        
         spikes_buffer = np.zeros((self.rec_delay + 2, self.n_hidden))
         hidden_record = np.zeros((T, self.n_hidden))
         
@@ -136,7 +150,12 @@ class RSNN_EI(RSNN_Homeo):
             I_in = self.W @ inp
             I_rec = self.U @ rec_spikes
             
-            V = V * self.decay_m + (I_in + I_rec) * self.scale_m
+            # 修正: 電圧更新 (LIF) をLIFLayerに移譲 (Objective 1.2)
+            # V = V * self.decay_m + (I_in + I_rec) * self.scale_m
+            
+            # 修正: 電圧更新のみを実行 (LIFLayer.V は更新される)
+            # V は self.lif_layer.V のローカルコピー
+            V = self.lif_layer.V * self.lif_layer.decay_m + (I_in + I_rec) * self.lif_layer.scale_m
             
             # --- k-Winners-Take-All (Excニューロンのみ) ---
             spk = np.zeros(self.n_hidden)
@@ -146,7 +165,11 @@ class RSNN_EI(RSNN_Homeo):
                 # 電圧が上位k個のニューロンを選択
                 winners_local_idx = np.argsort(exc_V)[-k:]
                 winners_global_idx = self.exc_idx[winners_local_idx]
-                spk[winners_global_idx] = 1.0
+                
+                # 修正: k-Winnersでも閾値 (adaptive_theta) を超えている必要がある
+                v_th_winners = self.adaptive_theta[winners_global_idx]
+                actual_winners = winners_global_idx[exc_V[winners_local_idx] >= v_th_winners]
+                spk[actual_winners] = 1.0
             
             # --- 抑制性ニューロンの発火 (通常のスレッショルディング) ---
             if len(self.inh_idx) > 0:
@@ -158,8 +181,11 @@ class RSNN_EI(RSNN_Homeo):
                     inh_effect = (self.U @ spk)
                     V[self.exc_idx] += inh_effect[self.exc_idx] * 0.5 # type: ignore[attr-defined]
 
-            # リセット
+            # 修正: リセット
             V = np.where(spk > 0, self.v_reset, V)
+            
+            # 修正: LIFLayerの内部電圧状態(V)を、k-Winnersの結果で更新
+            self.lif_layer.V = V
             
             spikes_buffer = np.roll(spikes_buffer, -1, axis=0)
             spikes_buffer[-1] = spk
