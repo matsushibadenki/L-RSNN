@@ -7,6 +7,7 @@ Writes JSON report to outputs/health_report.json
 This script is adapted from the rsnn_restructured_C project.
 """
 import sys, subprocess, json, time, pathlib, importlib, os
+from typing import Any # 修正: Any をインポート
 
 # 実行スクリプト (tools/health_check.py) の親ディレクトリ (プロジェクトルート)
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -36,7 +37,7 @@ SUMMARY_JSON_FILE = OUTPUT_DIR / summary_json_name
 README_MD_FILE = OUTPUT_DIR / readme_md_name
 
 
-report = {}
+report: dict[str, Any] = {} # 修正: 型注釈を追加
 report['timestamp'] = time.time()
 report['project_root'] = str(ROOT)
 report['python'] = sys.executable
@@ -54,7 +55,7 @@ packages = {
     "dependency_injector": "dependency_injector",
     "langchain_core": "langchain_core",
 }
-pkg_info = {}
+pkg_info: dict[str, Any] = {} # 修正: 型注釈
 req_file = ROOT / "requirements.txt"
 found_packages = set()
 
@@ -83,9 +84,9 @@ report["packages"] = pkg_info
 
 # 2. スモークテスト (DIコンテナの初期化)
 print("\n--- 2. Running Smoke Tests (DI Container Init) ---")
-smoke = {}
+smoke: dict[str, Any] = {} # 修正: 型注釈を追加
 try:
-    from rsnn.di.containers import ApplicationContainer
+    from rsnn.di.containers import ApplicationContainer # type: ignore[import-not-found]
     
     if not CONFIG_PATH.exists():
         raise FileNotFoundError(f"Config file not found: {CONFIG_PATH}")
@@ -110,7 +111,7 @@ report["smoke_tests"] = smoke
 # 3. 実験実行チェック (src/main.py)
 print(f"\n--- 3. Checking Experiment Run (python src/main.py) ---")
 print("  (This may take a moment...)")
-experiments = {}
+experiments: dict[str, Any] = {} # 修正: 型注釈を追加
 main_script = ROOT / "src" / "main.py"
 ran_ok = False
 try:
