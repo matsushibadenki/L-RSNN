@@ -196,9 +196,11 @@ class RSNN_EI(RSNN_Homeo):
             firing_count += spk
             
             if train_stdp:
+                # 入力 -> 隠れ層 STDP
                 pre_trace, post_trace, self.W = self.stdp(
                     inp, spk, pre_trace, post_trace, self.W
                 )
+                # 隠れ層 -> 隠れ層 STDP (1ステップ前のスパイクを使用)
                 pre_trace_rec, post_trace_rec, self.U = self.stdp(
                     spikes_buffer[-2], spk, pre_trace_rec, post_trace_rec, self.U
                 )
